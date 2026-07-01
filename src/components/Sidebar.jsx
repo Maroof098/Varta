@@ -40,7 +40,7 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
         }
     };
 
-    const currentName = profileName || auth.currentUser?.displayName || auth.currentUser?.email?.split("@")[0] || "Varta User";
+    const currentName = profileName || auth.currentUser?.displayName || "Varta User";
 
     const links = [
         { id: "chat", label: "Chat", icon: MessageSquare },
@@ -49,7 +49,7 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
     ];
 
     return (
-        <aside className={`flex h-full w-full flex-col border-r p-4 sm:p-5 ${darkMode ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-200 bg-white text-slate-900"}`}>
+        <aside className={`flex h-full max-h-screen w-full flex-col border-r p-4 sm:p-5 overflow-y-auto ${darkMode ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-200 bg-white text-slate-900"}`}>
             <div className="mb-5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <img src={vartaLogo} alt="Varta logo" className="h-10 w-10 rounded-xl object-cover" />
@@ -59,7 +59,12 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
                     </div>
                 </div>
                 {mobile && (
-                    <button type="button" onClick={onCloseMobile} className={`rounded-lg p-2 ${darkMode ? "bg-slate-800 text-slate-200" : "bg-slate-100 text-slate-700"}`}>
+                    <button
+                        type="button"
+                        onClick={onCloseMobile}
+                        aria-label="Close menu"
+                        className={`rounded-lg p-2 transition-colors ${darkMode ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                    >
                         <X size={16} />
                     </button>
                 )}

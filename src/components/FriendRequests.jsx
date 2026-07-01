@@ -27,7 +27,7 @@ function FriendRequests({ onSelectFriend }) {
         useState([]);
     const [profiles, setProfiles] = useState({});
 
-    const getDisplayName = (user) => user?.displayName || user?.email?.split("@")[0] || "User";
+    const getDisplayName = (user) => user?.displayName || "User";
 
     useEffect(() => {
         if (!auth.currentUser) return;

@@ -49,7 +49,7 @@ function ChatBox() {
         setShowEmojiPicker(false);
     };
 
-    const getDisplayName = (user) => user?.displayName || user?.email?.split("@")[0] || "User";
+    const getDisplayName = (user) => user?.displayName || "User";
 
     if (!selectedUser) {
         return (
@@ -71,7 +71,7 @@ function ChatBox() {
 
             <div className="flex-1 space-y-2 overflow-y-auto p-4 sm:p-5">
                 {messages.map((msg) => {
-                    const senderName = msg.senderId === auth.currentUser?.uid ? (auth.currentUser?.displayName || auth.currentUser?.email?.split("@")[0] || "You") : getDisplayName(selectedUser);
+                    const senderName = msg.senderId === auth.currentUser?.uid ? (auth.currentUser?.displayName || "You") : getDisplayName(selectedUser);
                     return (
                         <div key={msg.id} className={`w-fit max-w-[85%] rounded-2xl px-3 py-2 ${msg.senderId === auth.currentUser?.uid ? "ml-auto bg-blue-600 text-white" : "bg-slate-100 text-slate-800"}`}>
                             <p className="text-[11px] font-semibold opacity-80">{senderName}</p>

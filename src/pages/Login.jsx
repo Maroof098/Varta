@@ -22,7 +22,6 @@ function Login() {
                 doc(db, "users", userCredential.user.uid),
                 {
                     email: userCredential.user.email,
-                    displayName: userCredential.user.email?.split("@")[0] || "Varta User",
                     online: true,
                     lastSeen: serverTimestamp(),
                 },

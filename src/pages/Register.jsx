@@ -22,7 +22,7 @@ function Register() {
             await setDoc(doc(db, "users", userCredential.user.uid), {
                 uid: userCredential.user.uid,
                 email,
-                displayName: name.trim() || email.split("@")[0],
+                displayName: name.trim() || "Varta User",
                 online: true,
                 lastSeen: serverTimestamp(),
                 createdAt: serverTimestamp(),

@@ -18,6 +18,13 @@ function Dashboard() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
+        document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [mobileMenuOpen]);
+
+    useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
             const arr = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             setUsers(arr.filter((user) => user.id !== auth.currentUser?.uid));
@@ -61,7 +68,7 @@ function Dashboard() {
                                 onClick={() => { setSelectedUser(user); setActiveTab("chat"); }}
                                 className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left ${darkMode ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-white"}`}
                             >
-                                <span>{user.displayName || user.email?.split("@")[0] || user.email}</span>
+                                <span>{user.displayName || "Varta User"}</span>
                                 <span className={user.online ? "text-emerald-500" : "text-slate-400"}>{user.online ? "Online" : "Offline"}</span>
                             </button>
                         ))}
@@ -83,10 +90,15 @@ function Dashboard() {
                     <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onCloseMobile={() => setMobileMenuOpen(false)} mobile />
                 </div>
 
-                <main className="flex-1 overflow-hidden">
+                <main className="flex-1 min-h-0 overflow-hidden">
                     <div className={`flex items-center justify-between border-b px-4 py-3 md:hidden ${darkMode ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-white"}`}>
                         <div className="font-semibold">Varta</div>
-                        <button type="button" onClick={() => setMobileMenuOpen(true)} className={`rounded-lg p-2 ${darkMode ? "bg-slate-800" : "bg-slate-100"}`}>
+                        <button
+                            type="button"
+                            onClick={() => setMobileMenuOpen(true)}
+                            className={`rounded-lg p-2 transition-colors ${darkMode ? "bg-slate-800 hover:bg-slate-700" : "bg-slate-100 hover:bg-slate-200"}`}
+                            aria-label="Open menu"
+                        >
                             <Menu size={18} />
                         </button>
                     </div>

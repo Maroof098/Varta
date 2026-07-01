@@ -22,7 +22,7 @@ function FriendsList({ onSelectFriend }) {
     const [friends, setFriends] =
         useState([]);
 
-    const getDisplayName = (user) => user?.displayName || user?.email?.split("@")[0] || "User";
+    const getDisplayName = (user) => user?.displayName || "User";
 
     useEffect(() => {
         if (!auth.currentUser)
@@ -77,7 +77,7 @@ function FriendsList({ onSelectFriend }) {
             ) : (
                 friends.map((friend) => (
                     <button key={friend.id} type="button" onClick={() => onSelectFriend?.(friend)} className={`mb-3 flex w-full items-center gap-4 rounded-2xl border p-4 text-left ${darkMode ? "border-slate-800 bg-slate-900/70" : "border-slate-200 bg-white"}`}>
-                        <img src={`https://ui-avatars.com/api/?name=${friend.displayName || friend.email || "User"}`} className="h-12 w-12 rounded-full" alt="" />
+                        <img src={`https://ui-avatars.com/api/?name=${friend.displayName || "User"}`} className="h-12 w-12 rounded-full" alt={friend.displayName || "User avatar"} />
                         <div className="min-w-0 flex-1">
                             <h3 className="font-semibold">{getDisplayName(friend)}</h3>
                             <p className={`text-sm ${friend.online ? "text-emerald-400" : darkMode ? "text-slate-400" : "text-slate-500"}`}>
