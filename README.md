@@ -4,7 +4,7 @@ Varta is a modern full-stack real-time messaging platform built with React, Fire
 
 ## 🚀 Live Demo
 
-🔗 https://your-vercel-url.vercel.app
+🔗 https://varta-5jf32ickr-varta.vercel.app/
 
 ## ✨ Features
 
