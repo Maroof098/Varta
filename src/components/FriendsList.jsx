@@ -50,15 +50,17 @@ function FriendsList({ onSelectFriend }) {
                                             )
                                         );
 
-                                    return {
-                                        id: f.id,
-                                        ...userDoc.data(),
-                                    };
+                                    return userDoc.exists()
+                                        ? {
+                                            id: f.id,
+                                            ...userDoc.data(),
+                                        }
+                                        : null;
                                 }
                             )
                         );
 
-                    setFriends(arr);
+                    setFriends(arr.filter(Boolean));
                 }
             );
 

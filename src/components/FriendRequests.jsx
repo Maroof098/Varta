@@ -141,22 +141,28 @@ function FriendRequests({ onSelectFriend }) {
             ) : (
                 requests.map((req) => {
                     const profile = profiles[req.senderId];
-                    const label = getDisplayName(profile) || req.senderId;
+                    const label = profile ? getDisplayName(profile) : "Deleted user";
 
                     return (
                         <div key={req.id} className={`mb-3 rounded-2xl border p-4 ${darkMode ? "border-slate-800 bg-slate-900/70" : "border-slate-200 bg-white"}`}>
                             <div className="flex items-center justify-between gap-3">
                                 <div>
                                     <h3 className="font-semibold">{label}</h3>
-                                    <p className={`text-sm ${darkMode ? "text-slate-400" : "text-slate-500"}`}>Pending connection</p>
+                                    <p className={`text-sm ${darkMode ? "text-slate-400" : "text-slate-500"}`}>{profile ? "Pending connection" : "Account deleted"}</p>
                                 </div>
-                                {onSelectFriend && (
+                                {onSelectFriend && profile && (
                                     <button type="button" onClick={() => onSelectFriend({ id: req.senderId, ...profile })} className="rounded-xl border border-cyan-500/20 px-3 py-2 text-sm text-cyan-400">Chat</button>
                                 )}
                             </div>
 
                             <div className="mt-4 flex gap-2">
-                                <button onClick={() => acceptRequest(req)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm">Accept</button>
+                                <button
+                                    onClick={() => profile && acceptRequest(req)}
+                                    disabled={!profile}
+                                    className={`rounded-xl px-4 py-2 text-sm ${profile ? "bg-emerald-600" : "bg-slate-500 text-slate-200 cursor-not-allowed"}`}
+                                >
+                                    {profile ? "Accept" : "Deleted"}
+                                </button>
                                 <button onClick={() => rejectRequest(req)} className="rounded-xl bg-rose-600 px-4 py-2 text-sm">Reject</button>
                             </div>
                         </div>

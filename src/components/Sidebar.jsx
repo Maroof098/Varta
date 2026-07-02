@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { collection, doc, getDoc, query, setDoc, serverTimestamp, where, onSnapshot } from "firebase/firestore";
 import { signOut } from "firebase/auth";
-import { MessageSquare, User, Users, LogOut, Moon, Sun, X } from "lucide-react";
+import { MessageSquare, User, Users, Bell, LogOut, Moon, Sun, X } from "lucide-react";
 import { auth, db } from "../firebase/firebase";
 import { ChatContext } from "../context/ChatContext";
 import { ThemeContext } from "../context/ThemeContext";
@@ -13,6 +13,7 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
     const { setSelectedUser } = useContext(ChatContext);
     const { darkMode, toggleTheme } = useContext(ThemeContext);
     const [profileName, setProfileName] = useState("");
+    const [requestCount, setRequestCount] = useState(0);
 
     useEffect(() => {
         if (!auth.currentUser?.uid) return;
@@ -21,6 +22,22 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
             if (snapshot.exists()) {
                 setProfileName(snapshot.data().displayName || "Varta User");
             }
+        });
+
+        return unsubscribe;
+    }, []);
+
+    useEffect(() => {
+        if (!auth.currentUser?.uid) return;
+
+        const q = query(
+            collection(db, "friendRequests"),
+            where("receiverId", "==", auth.currentUser.uid),
+            where("status", "==", "pending")
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setRequestCount(snapshot.size);
         });
 
         return unsubscribe;
@@ -45,6 +62,7 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
     const links = [
         { id: "chat", label: "Chat", icon: MessageSquare },
         { id: "friends", label: "Friends", icon: Users },
+        { id: "requests", label: "Requests", icon: Bell },
         { id: "profile", label: "Profile", icon: User },
     ];
 
@@ -84,10 +102,15 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
                             setActiveTab(id);
                             onCloseMobile?.();
                         }}
-                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${activeTab === id ? (darkMode ? "bg-slate-800" : "bg-slate-100") : ""}`}
+                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left ${activeTab === id ? (darkMode ? "bg-slate-800" : "bg-slate-100") : ""}`}
                     >
-                        <Icon size={18} />
-                        <span>{label}</span>
+                        <div className="flex items-center gap-3">
+                            <Icon size={18} />
+                            <span>{label}</span>
+                        </div>
+                        {id === "requests" && requestCount > 0 && (
+                            <span className="rounded-full bg-fuchsia-600 px-2 py-0.5 text-xs font-semibold text-white">{requestCount}</span>
+                        )}
                     </button>
                 ))}
             </nav>
