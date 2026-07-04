@@ -7,8 +7,6 @@ import {
 import {
     collection,
     onSnapshot,
-    getDoc,
-    doc,
 } from "firebase/firestore";
 
 import {
@@ -16,8 +14,9 @@ import {
     db,
 } from "../firebase/firebase";
 import { ThemeContext } from "../context/ThemeContext";
+import { getPresenceMeta } from "../utils/presence";
 
-function FriendsList({ onSelectFriend }) {
+function FriendsList({ onSelectFriend, selectedChatId }) {
     const { darkMode } = useContext(ThemeContext);
     const [friends, setFriends] =
         useState([]);
@@ -25,46 +24,40 @@ function FriendsList({ onSelectFriend }) {
     const getDisplayName = (user) => user?.displayName || "User";
 
     useEffect(() => {
-        if (!auth.currentUser)
+        if (!auth.currentUser) {
+            setFriends([]);
             return;
+        }
 
-        const unsubscribe =
-            onSnapshot(
-                collection(
-                    db,
-                    "friends",
-                    auth.currentUser.uid,
-                    "userFriends"
-                ),
-                async (snapshot) => {
-                    const arr =
-                        await Promise.all(
-                            snapshot.docs.map(
-                                async (f) => {
-                                    const userDoc =
-                                        await getDoc(
-                                            doc(
-                                                db,
-                                                "users",
-                                                f.id
-                                            )
-                                        );
+        let currentFriendIds = [];
+        let userDocs = [];
 
-                                    return userDoc.exists()
-                                        ? {
-                                            id: f.id,
-                                            ...userDoc.data(),
-                                        }
-                                        : null;
-                                }
-                            )
-                        );
+        const syncFriends = () => {
+            const matchingFriends = currentFriendIds
+                .map((friendId) => userDocs.find((userDoc) => userDoc.id === friendId))
+                .filter(Boolean)
+                .map((userDoc) => ({ id: userDoc.id, ...userDoc.data() }));
 
-                    setFriends(arr.filter(Boolean));
-                }
-            );
+            setFriends(matchingFriends);
+        };
 
-        return unsubscribe;
+        const unsubscribeFriends = onSnapshot(
+            collection(db, "friends", auth.currentUser.uid, "userFriends"),
+            (snapshot) => {
+                currentFriendIds = snapshot.docs.map((doc) => doc.id);
+                syncFriends();
+            }
+        );
+
+        const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+            userDocs = snapshot.docs;
+            syncFriends();
+        });
+
+        return () => {
+            unsubscribeFriends();
+            unsubscribeUsers();
+        };
     }, []);
 
     return (
@@ -77,17 +70,23 @@ function FriendsList({ onSelectFriend }) {
             {friends.length === 0 ? (
                 <p className={darkMode ? "text-slate-400" : "text-slate-500"}>No friends yet</p>
             ) : (
-                friends.map((friend) => (
-                    <button key={friend.id} type="button" onClick={() => onSelectFriend?.(friend)} className={`mb-3 flex w-full items-center gap-4 rounded-2xl border p-4 text-left ${darkMode ? "border-slate-800 bg-slate-900/70" : "border-slate-200 bg-white"}`}>
-                        <img src={`https://ui-avatars.com/api/?name=${friend.displayName || "User"}`} className="h-12 w-12 rounded-full" alt={friend.displayName || "User avatar"} />
-                        <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold">{getDisplayName(friend)}</h3>
-                            <p className={`text-sm ${friend.online ? "text-emerald-400" : darkMode ? "text-slate-400" : "text-slate-500"}`}>
-                                {friend.online ? "● Online" : "● Offline"}
-                            </p>
-                        </div>
-                    </button>
-                ))
+                friends.map((friend) => {
+                    const presence = getPresenceMeta(friend);
+                    return (
+                        <button key={friend.id} type="button" onClick={() => onSelectFriend?.(friend)} className={`mb-3 flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ${selectedChatId === friend.id ? (darkMode ? "border-blue-500 bg-slate-800" : "border-blue-500 bg-blue-50") : darkMode ? "border-slate-800 bg-slate-900/70" : "border-slate-200 bg-white"}`}>
+                            <div className="relative">
+                                <img src={`https://ui-avatars.com/api/?name=${friend.displayName || "User"}`} className="h-12 w-12 rounded-full" alt={friend.displayName || "User avatar"} />
+                                <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 ${darkMode ? "border-slate-900" : "border-white"} ${presence.dotClass}`} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="font-semibold">{getDisplayName(friend)}</h3>
+                                <p className={`text-sm ${presence.isOnline ? "text-emerald-400" : darkMode ? "text-slate-400" : "text-slate-500"}`}>
+                                    {presence.lastSeenLabel}
+                                </p>
+                            </div>
+                        </button>
+                    );
+                })
             )}
         </div>
     );

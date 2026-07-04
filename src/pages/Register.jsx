@@ -4,6 +4,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { auth, db } from "../firebase/firebase";
+import { setUserPresence } from "../utils/presence";
 import vartaLogo from "../assets/hero.png";
 
 function Register() {
@@ -23,10 +24,10 @@ function Register() {
                 uid: userCredential.user.uid,
                 email,
                 displayName: name.trim() || "Varta User",
-                online: true,
-                lastSeen: serverTimestamp(),
                 createdAt: serverTimestamp(),
             });
+
+            await setUserPresence(db, userCredential.user.uid, true);
 
             navigate("/dashboard");
         } catch (error) {

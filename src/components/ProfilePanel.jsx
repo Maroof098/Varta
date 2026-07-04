@@ -1,7 +1,10 @@
-import { useContext, useEffect, useState } from "react";
+import { Suspense, lazy, useContext, useEffect, useState } from "react";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { auth, db } from "../firebase/firebase";
 import { ThemeContext } from "../context/ThemeContext";
+import { getPresenceMeta } from "../utils/presence";
+
+const GenerateBioPanel = lazy(() => import("./profile/GenerateBioPanel"));
 
 function ProfilePanel() {
     const { darkMode } = useContext(ThemeContext);
@@ -9,7 +12,7 @@ function ProfilePanel() {
     const [displayNameInput, setDisplayNameInput] = useState("");
     const [saving, setSaving] = useState(false);
     const user = auth.currentUser;
-    const displayName = profile?.displayName || user?.displayName || "Varta User";
+    const presence = getPresenceMeta(profile);
 
     useEffect(() => {
         if (!user?.uid) return;
@@ -71,9 +74,17 @@ function ProfilePanel() {
                     </div>
                     <div>
                         <p className="text-sm text-slate-500">Status</p>
-                        <p className="font-medium">{profile?.online ? "Online" : "Offline"}</p>
+                        <p className="font-medium flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full ${presence.dotClass}`} />
+                            {presence.label}
+                        </p>
+                        <p className={`mt-1 text-sm ${darkMode ? "text-slate-400" : "text-slate-500"}`}>Last seen {presence.lastSeenLabel}</p>
                     </div>
                 </div>
+
+                <Suspense fallback={<div className="mt-4 text-sm text-slate-500">Loading bio generator...</div>}>
+                    <GenerateBioPanel />
+                </Suspense>
 
                 <div className="mt-6 flex justify-end">
                     <button

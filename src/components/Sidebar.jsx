@@ -1,11 +1,12 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, doc, getDoc, query, setDoc, serverTimestamp, where, onSnapshot } from "firebase/firestore";
+import { collection, doc, query, where, onSnapshot } from "firebase/firestore";
 import { signOut } from "firebase/auth";
-import { MessageSquare, User, Users, Bell, LogOut, Moon, Sun, X } from "lucide-react";
+import { MessageSquare, User, Users, Bell, LogOut, Moon, Sun, X, Sparkles } from "lucide-react";
 import { auth, db } from "../firebase/firebase";
 import { ChatContext } from "../context/ChatContext";
 import { ThemeContext } from "../context/ThemeContext";
+import { setUserPresence } from "../utils/presence";
 import vartaLogo from "../assets/hero.png";
 
 function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
@@ -45,8 +46,8 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
 
     const handleLogout = async () => {
         try {
-            if (auth.currentUser) {
-                await setDoc(doc(db, "users", auth.currentUser.uid), { online: false, lastSeen: serverTimestamp() }, { merge: true });
+            if (auth.currentUser?.uid) {
+                await setUserPresence(db, auth.currentUser.uid, false);
             }
 
             setSelectedUser(null);
@@ -61,6 +62,7 @@ function Sidebar({ activeTab, setActiveTab, onCloseMobile, mobile = false }) {
 
     const links = [
         { id: "chat", label: "Chat", icon: MessageSquare },
+        { id: "ai", label: "Varta AI", icon: Sparkles },
         { id: "friends", label: "Friends", icon: Users },
         { id: "requests", label: "Requests", icon: Bell },
         { id: "profile", label: "Profile", icon: User },

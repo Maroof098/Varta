@@ -1,33 +1,37 @@
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
+
+const Home = lazy(() => import("./pages/Home"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
+      <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-slate-500">Loading Varta...</div>}>
+        <Routes>
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
 
-        <Route
-          path="/"
-          element={<Home />}
-        />
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+          <Route
+            path="/login"
+            element={<Login />}
+          />
 
-        <Route
-          path="/register"
-          element={<Register />}
-        />
-      </Routes>
+          <Route
+            path="/register"
+            element={<Register />}
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

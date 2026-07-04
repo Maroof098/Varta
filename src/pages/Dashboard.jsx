@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { Suspense, lazy, useContext, useEffect, useMemo, useState } from "react";
 import { Menu } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import ChatBox from "../components/ChatBox";
@@ -8,16 +8,20 @@ import FriendsList from "../components/FriendsList";
 import { ThemeContext } from "../context/ThemeContext";
 import { ChatContext } from "../context/ChatContext";
 import { auth, db } from "../firebase/firebase";
-import { collection, onSnapshot, query, where, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { bindPresenceLifecycle, getPresenceMeta, setUserPresence } from "../utils/presence";
+
+const VartaAIAssistant = lazy(() => import("../components/ai/VartaAIAssistant"));
 
 function Dashboard() {
     const { darkMode } = useContext(ThemeContext);
-    const { setSelectedUser } = useContext(ChatContext);
+    const { selectedChat, setSelectedUser, setSelectedChat, setSelectedConversationId } = useContext(ChatContext);
     const [activeTab, setActiveTab] = useState("chat");
     const [users, setUsers] = useState([]);
     const [pendingRequests, setPendingRequests] = useState([]);
     const [friendIds, setFriendIds] = useState([]);
-    const [message, setMessage] = useState("");
+    const [feedbackMessage, setFeedbackMessage] = useState("");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
@@ -26,6 +30,28 @@ function Dashboard() {
             document.body.style.overflow = "";
         };
     }, [mobileMenuOpen]);
+
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+            if (!user?.uid) {
+                if (auth.currentUser?.uid) {
+                    await setUserPresence(db, auth.currentUser.uid, false);
+                }
+                return;
+            }
+
+            await setUserPresence(db, user.uid, true);
+        });
+
+        return () => {
+            unsubscribeAuth();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!auth.currentUser?.uid) return;
+        return bindPresenceLifecycle(db, auth.currentUser.uid);
+    }, [auth.currentUser?.uid]);
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
@@ -92,6 +118,31 @@ function Dashboard() {
         };
     }, []);
 
+    const handleSelectFriend = (friend) => {
+        if (!friend?.id) return;
+
+        setSelectedUser(friend);
+        setSelectedChat(friend.id);
+        setSelectedConversationId(
+            auth.currentUser?.uid && friend.id
+                ? [auth.currentUser.uid, friend.id].sort().join("_")
+                : friend.id
+        );
+        setActiveTab("chat");
+    };
+
+    const sortedUsers = useMemo(() => {
+        return [...users].sort((left, right) => {
+            const leftPresence = getPresenceMeta(left);
+            const rightPresence = getPresenceMeta(right);
+
+            if (leftPresence.isOnline === rightPresence.isOnline) {
+                return (left.displayName || "").localeCompare(right.displayName || "");
+            }
+            return leftPresence.isOnline ? -1 : 1;
+        });
+    }, [users]);
+
     const sendFriendRequest = async (user) => {
         if (!auth.currentUser || user.id === auth.currentUser.uid) return;
 
@@ -102,7 +153,7 @@ function Dashboard() {
         );
 
         if (existing || friendIds.includes(user.id)) {
-            setMessage("Unable to send request: already friends or request exists.");
+            setFeedbackMessage("Unable to send request: already friends or request exists.");
             return;
         }
 
@@ -119,16 +170,16 @@ function Dashboard() {
                 status: "pending",
                 createdAt: serverTimestamp(),
             });
-            setMessage("Friend request sent.");
+            setFeedbackMessage("Friend request sent.");
         } catch (err) {
             console.error(err);
-            setMessage("Failed to send friend request.");
+            setFeedbackMessage("Failed to send friend request.");
         }
     };
 
     const getPeopleAction = (user) => {
         if (friendIds.includes(user.id)) {
-            return { label: "Friends", disabled: false, onClick: () => { setSelectedUser(user); setActiveTab("chat"); } };
+            return { label: "Friends", disabled: false, onClick: () => handleSelectFriend(user) };
         }
 
         const request = pendingRequests.find(
@@ -149,7 +200,7 @@ function Dashboard() {
             return (
                 <div className="h-full overflow-y-auto p-6">
                     <div className={`rounded-xl border p-4 ${darkMode ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"}`}>
-                        <FriendsList onSelectFriend={(friend) => { setSelectedUser(friend); setActiveTab("chat"); }} />
+                        <FriendsList onSelectFriend={handleSelectFriend} selectedChatId={selectedChat} />
                     </div>
                 </div>
             );
@@ -169,31 +220,64 @@ function Dashboard() {
             return <ProfilePanel />;
         }
 
+        if (activeTab === "ai") {
+            return (
+                <div className="h-full overflow-y-auto p-6">
+                    <div className={`rounded-xl border p-4 ${darkMode ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"}`}>
+                        <div className="mb-4">
+                            <h3 className="text-lg font-semibold">Varta AI</h3>
+                            <p className={`text-sm ${darkMode ? "text-slate-400" : "text-slate-500"}`}>A dedicated assistant chat, separate from your personal conversations.</p>
+                        </div>
+                        <Suspense fallback={<div className="text-sm text-slate-500">Loading assistant...</div>}>
+                            <VartaAIAssistant />
+                        </Suspense>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="flex h-full flex-col lg:flex-row">
                 <div className={`w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r p-4 ${darkMode ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"}`}>
                     <h3 className="mb-4 font-medium">People</h3>
+                    {feedbackMessage ? <p className="mb-3 text-sm text-blue-600">{feedbackMessage}</p> : null}
                     <div className="space-y-3">
-                        {users.map((user) => {
+                        {sortedUsers.map((user) => {
                             const action = getPeopleAction(user);
+                            const presence = getPresenceMeta(user);
+                            const isActive = selectedChat === user.id;
 
                             return (
-                                <div key={user.id} className={`rounded-2xl border px-3 py-3 ${darkMode ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-white"}`}>
+                                <button key={user.id} type="button" onClick={() => handleSelectFriend(user)} className={`w-full rounded-2xl border px-3 py-3 text-left transition ${isActive ? (darkMode ? "border-blue-500 bg-slate-800" : "border-blue-500 bg-blue-50") : darkMode ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-white"}`}>
                                     <div className="mb-3 flex items-center justify-between gap-4">
-                                        <div>
-                                            <p className="font-semibold">{user.displayName || "Varta User"}</p>
-                                            <p className={`text-sm ${user.online ? "text-emerald-500" : "text-slate-500"}`}>{user.online ? "Online" : "Offline"}</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <img src={`https://ui-avatars.com/api/?name=${user.displayName || "Varta User"}`} className="h-10 w-10 rounded-full" alt="" />
+                                                <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 ${darkMode ? "border-slate-950" : "border-white"} ${presence.dotClass}`} />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold">{user.displayName || "Varta User"}</p>
+                                                <p className={`text-sm ${presence.isOnline ? "text-emerald-500" : "text-slate-500"}`}>{presence.lastSeenLabel}</p>
+                                            </div>
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={action.onClick}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                if (action.disabled) return;
+                                                if (action.label === "Add Friend") {
+                                                    void sendFriendRequest(user);
+                                                    return;
+                                                }
+                                                handleSelectFriend(user);
+                                            }}
                                             disabled={action.disabled}
                                             className={`rounded-full px-3 py-1 text-sm font-semibold ${action.disabled ? "bg-slate-500 text-slate-200" : "bg-blue-600 text-white hover:bg-blue-700"}`}
                                         >
                                             {action.label}
                                         </button>
                                     </div>
-                                </div>
+                                </button>
                             );
                         })}
                     </div>

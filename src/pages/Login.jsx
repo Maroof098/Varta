@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { auth, db } from "../firebase/firebase";
+import { setUserPresence } from "../utils/presence";
 import vartaLogo from "../assets/hero.png";
 
 function Login() {
@@ -18,15 +18,7 @@ function Login() {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-            await setDoc(
-                doc(db, "users", userCredential.user.uid),
-                {
-                    email: userCredential.user.email,
-                    online: true,
-                    lastSeen: serverTimestamp(),
-                },
-                { merge: true }
-            );
+            await setUserPresence(db, userCredential.user.uid, true);
 
             navigate("/dashboard");
         } catch (error) {

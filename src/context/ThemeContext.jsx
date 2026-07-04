@@ -1,15 +1,9 @@
-import {
-    createContext,
-    useEffect,
-    useState,
-} from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useEffect, useState } from "react";
 
-export const ThemeContext =
-    createContext();
+export const ThemeContext = createContext();
 
-export function ThemeProvider({
-    children,
-}) {
+export function ThemeProvider({ children }) {
     const [darkMode, setDarkMode] =
         useState(() => {
             const saved =
